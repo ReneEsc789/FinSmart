@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from src.models.usuario import Usuario
 from src.models.rol import Rol
@@ -14,6 +15,14 @@ from src.routers.ml import router as ml_routers
 load_dotenv()
 
 app = FastAPI(title="FinSmart API", version = "1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router)
 app.include_router(categorias_router)
