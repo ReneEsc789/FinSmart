@@ -232,7 +232,7 @@ export const Accounts = () => {
       {/* Modals */}
       <AnimatePresence>
         {isAddingCategory && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -244,7 +244,7 @@ export const Accounts = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+              className="relative w-full max-w-lg bg-white/2 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black font-display tracking-tight">Nueva Categoría</h2>
@@ -334,7 +334,7 @@ export const Accounts = () => {
         )}
 
         {isAddingAccount && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -346,7 +346,7 @@ export const Accounts = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+              className="relative w-full max-w-lg bg-white/2 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black font-display tracking-tight">Nueva Cuenta</h2>

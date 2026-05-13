@@ -92,7 +92,7 @@ export const Analysis = () => {
               </div>
             </div>
           </div>
-          <div className="h-[350px]">
+          <div className="h-87.5">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={predictionData}>
                 <defs>
@@ -133,7 +133,7 @@ export const Analysis = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-10 p-8 bg-purple-600/10 border border-purple-500/20 rounded-[2rem] flex flex-col md:flex-row items-center gap-8">
+          <div className="mt-10 p-8 bg-purple-600/10 border border-purple-500/20 rounded-4xl flex flex-col md:flex-row items-center gap-8">
             <div className="bg-purple-600 p-4 rounded-2xl shadow-xl shadow-purple-600/30">
               <Sparkles className="text-white" size={32} />
             </div>
@@ -212,7 +212,7 @@ export const Analysis = () => {
         {/* Tip Detail Modal */}
         <AnimatePresence>
           {selectedTip && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -224,7 +224,7 @@ export const Analysis = () => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="relative w-full max-w-md bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+                className="relative w-full max-w-md bg-white/2 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
               >
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
@@ -267,7 +267,7 @@ export const Analysis = () => {
         {/* New Goal Modal */}
         <AnimatePresence>
           {isAddingGoal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -279,7 +279,7 @@ export const Analysis = () => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="relative w-full max-w-md bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+                className="relative w-full max-w-md bg-white/2 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
               >
                 <div className="flex items-center justify-between mb-8">
                   <h2 className="text-2xl font-black font-display tracking-tight">Nueva Meta</h2>

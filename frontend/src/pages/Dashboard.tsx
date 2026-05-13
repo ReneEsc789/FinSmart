@@ -142,7 +142,7 @@ export const Dashboard = () => {
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-80 transition-opacity" />
+              <div className="absolute inset-0 bg-linear-to-r from-purple-600/20 to-blue-600/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-80 transition-opacity" />
               <div className="glass p-10 rounded-[3rem] relative z-10 border-purple-500/20">
                 <div className="flex flex-col lg:flex-row gap-12 items-center">
                   <div className="flex-1 space-y-6">
@@ -203,7 +203,7 @@ export const Dashboard = () => {
               <h3 className="text-2xl font-black font-display">Distribución</h3>
               <button className="text-gray-500 hover:text-white transition-colors"><Plus size={20} /></button>
             </div>
-            <div className="h-[300px]">
+            <div className="h-75">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -247,7 +247,7 @@ export const Dashboard = () => {
                 <div className="w-3 h-3 rounded-full bg-green-500" />
               </div>
             </div>
-            <div className="h-[350px]">
+            <div className="h-87.5">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
