@@ -6,6 +6,7 @@ from src.schemas.cuenta import CuentaCreate, CuentaResponse, CuentaUpdate, Cuent
 from src.middleware.auth import verificar_token
 from typing import List
 from uuid import UUID
+from sqlalchemy import func
 
 router = APIRouter(prefix="/cuentas", tags=["Cuentas"])
 
@@ -14,7 +15,7 @@ def create_cuenta(cuenta: CuentaCreate, db: Session = Depends(get_db), payload: 
     usuario_id = payload.get("sub")
     
     exist = db.query(Cuenta).filter(
-        Cuenta.nombre == cuenta.nombre,
+        func.lower(Cuenta.nombre) == cuenta.nombre.lower(),
         Cuenta.usuario_id == usuario_id
         ).first()
     if exist:

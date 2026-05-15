@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.models.alerta import Alerta
 from src.schemas.ml import PrediccionResponse, AnomaliasResponse, ConsejosResponse, AlertaPresupuestoResponse 
 from src.ml.prediccion import predecir_gasto
 from src.ml.anomalias import detectar_anomalia
@@ -42,10 +41,10 @@ def get_consejos(db: Session = Depends(get_db), payload: dict = Depends(verifica
     
 @router.get("/alertas-presupuesto", response_model=List[AlertaPresupuestoResponse])
 def get_alertas_presupuesto(db: Session = Depends(get_db), payload: dict = Depends(verificar_token)):
-        usuario_id = payload.get("sub")
-        try:
-            alerta_presupuesto = verificar_presupuestos(usuario_id, db)
-            return alerta_presupuesto
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    usuario_id = payload.get("sub")
+    try:
+        alerta_presupuesto = verificar_presupuestos(usuario_id, db)
+        return alerta_presupuesto
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     

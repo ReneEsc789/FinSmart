@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, field_validator
 
 class UsuarioLogin(BaseModel):
@@ -17,3 +19,5 @@ class LoginResponse(BaseModel):
     message: str
     access_token: str
     token_type: str
+    user_id: UUID
+    rol_id: int

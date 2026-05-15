@@ -16,7 +16,7 @@ class UsuarioBase(BaseModel):
         return v
     
 class UsuarioCreate(UsuarioBase):
-    rol_id: int
+    rol_id: int = 2
     contrasena: str
 
     

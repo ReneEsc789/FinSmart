@@ -2,12 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models.presupuesto import Presupuesto
+from src.models.categoria import Categoria
 from src.schemas.presupuesto import PresupuestoCreate, PresupuestoResponse, PresupuestoResponseModel, PresupuestoUpdate
 from src.middleware.auth import verificar_token
 from typing import List
 from uuid import UUID
+from sqlalchemy import or_
 
 router = APIRouter(prefix="/presupuestos", tags=["Presupuestos"])
+
+def _categoria_permitida(db: Session, categoria_id: UUID, usuario_id: str):
+    return db.query(Categoria).filter(
+        Categoria.id == categoria_id,
+        or_(Categoria.es_default.is_(True), Categoria.usuario_id == usuario_id)
+    ).first()
 
 @router.post("/", response_model=PresupuestoResponseModel, status_code=201)
 def create_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get_db), payload: dict = Depends(verificar_token)):
@@ -17,10 +25,12 @@ def create_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get
         Presupuesto.usuario_id == usuario_id,
         Presupuesto.categoria_id == presupuesto.categoria_id,
         Presupuesto.periodo == presupuesto.periodo
-        ).first()
+    ).first()
     if exist:
         raise HTTPException(status_code=400, detail="Ya existe un presupuesto para esa categoria")
-
+    categoria = _categoria_permitida(db, presupuesto.categoria_id, usuario_id)
+    if not categoria:
+        raise HTTPException(status_code=404, detail="Categoria no encontrada o no tienes permiso para usarla")
     try:
         nuevo_presupuesto = Presupuesto(
             monto_limite = presupuesto.monto_limite,

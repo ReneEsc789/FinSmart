@@ -7,6 +7,7 @@ from src.models.usuario import Usuario
 from src.schemas.usuario import UsuarioCreate, UsuarioResponseModel
 from src.schemas.auth import UsuarioLogin, LoginResponse
 from datetime import datetime, timedelta, timezone
+from sqlalchemy import func
 import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -19,7 +20,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 def hashear_contrasena(contrasena):
     return pwd_context.hash(contrasena)
 
-def verificar_contrasena(contrasena, hash):
+def verificar_contrasena(contrasena: str, hash: str):
     return pwd_context.verify(contrasena, hash)
 
 def crear_token(data: dict):
@@ -31,8 +32,9 @@ def crear_token(data: dict):
 
 @router.post("/registro", response_model= UsuarioResponseModel, status_code=201)
 def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
+    correo_formato = usuario.email.strip().lower()
     
-    exist = db.query(Usuario).filter(Usuario.email == usuario.email).first()
+    exist = db.query(Usuario).filter(func.lower(Usuario.email) == correo_formato).first()
     if exist:
         raise HTTPException(
             status_code=400, 
@@ -43,10 +45,10 @@ def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     
         nuevo_usuario = Usuario(
             nombre = usuario.nombre,
-            email = usuario.email,
+            email = correo_formato,
             contrasena_hash = hashear_contrasena(usuario.contrasena),
             moneda = usuario.moneda or "MXN",
-            rol_id = usuario.rol_id
+            rol_id = usuario.rol_id or 2
         )
         db.add(nuevo_usuario)
         db.commit()
@@ -61,7 +63,8 @@ def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     
 @router.post("/login", response_model=LoginResponse)
 def login(usuario: UsuarioLogin, db: Session = Depends(get_db)):
-    correo = db.query(Usuario).filter(Usuario.email == usuario.email).first()
+    correo_formato = usuario.email.strip().lower()
+    correo = db.query(Usuario).filter(func.lower(Usuario.email) == correo_formato).first()
     
     if not correo:
         raise HTTPException(
@@ -77,9 +80,11 @@ def login(usuario: UsuarioLogin, db: Session = Depends(get_db)):
     
     token = crear_token({"sub": str(correo.id), "rol": correo.rol_id})
     
-    return{
-        "message": "Login exitoso", 
-        "access_token": token, 
-        "token_type": "bearer"
-        }
+    return LoginResponse(
+        message = "Login exitoso",
+        access_token = token,
+        token_type = "bearer",
+        user_id = correo.id,
+        rol_id = correo.rol_id
+    )
         

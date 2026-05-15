@@ -15,9 +15,9 @@ class RolCreate(RolBase):
     pass
     
 class RolUpdate(BaseModel):
-    nombre: Optional[str] = None
+    nombre_rol: Optional[str] = None
     
-    @field_validator("nombre")
+    @field_validator("nombre_rol")
     @classmethod
     def vacio(cls, v):
         if v is not None and v.strip() == "":

@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models.transaccion import Transaccion
+from src.models.categoria import Categoria
 from src.schemas.transaccion import TransaccionCreate, TransaccionResponse, TransaccionResponseModel
 from src.models.cuenta import Cuenta
 from src.middleware.auth import verificar_token
+from sqlalchemy import or_
 from typing import List
 from uuid import UUID
 
@@ -19,6 +21,14 @@ def create_transaccion(transaccion: TransaccionCreate, db: Session = Depends(get
             raise HTTPException(status_code=404, detail="Cuenta no encontrada")
         if str(cuenta.usuario_id) != usuario_id:
             raise HTTPException(status_code=400, detail="No tienes permiso para usar esta cuenta")
+        
+        categoria = (
+            db.query(Categoria)
+            .filter(Categoria.id == transaccion.categoria_id, or_(Categoria.es_default.is_(True), Categoria.usuario_id == usuario_id))
+            .first()
+        )
+        if not categoria:
+            raise HTTPException(status_code=404, detail="Categoria no encontrada o no autorizada")
         nueva_transaccion = Transaccion(
             monto = transaccion.monto,
             tipo = transaccion.tipo,
@@ -49,6 +59,7 @@ def get_transacciones(db: Session = Depends(get_db), payload: dict = Depends(ver
     try:
         transacciones = db.query(Transaccion).filter(
             Transaccion.usuario_id == usuario_id
+        ).order_by(Transaccion.fecha.desc(), Transaccion.fecha_creacion.desc()
         ).all()
         return transacciones
     except Exception as e:

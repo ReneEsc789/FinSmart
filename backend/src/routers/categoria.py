@@ -6,15 +6,27 @@ from src.schemas.categoria import CategoriaCreate, CategoriaResponse, CategoriaU
 from src.middleware.auth import verificar_token
 from typing import List
 from uuid import UUID
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 router = APIRouter(prefix="/categorias", tags=["Categorias"])
+
+def _exist(db: Session, usuario_id: str, nombre: str, categoria_id: UUID | None = None):
+    filtro = [
+        func.lower(Categoria.nombre) == nombre.lower(),
+        or_(Categoria.es_default.is_(True), Categoria.usuario_id == usuario_id)
+    ]
+    
+    query = db.query(Categoria).filter(*filtro)
+    if categoria_id is not None:
+        query = query.filter(Categoria.id != categoria_id)
+        
+    return query.first()
 
 @router.post("/", response_model = CategoriaResponseModel, status_code = 201)
 def create_categoria(categoria: CategoriaCreate,  db: Session = Depends(get_db), payload: dict = Depends(verificar_token)):
     usuario_id = payload.get("sub")
     
-    exist = db.query(Categoria).filter(Categoria.nombre == categoria.nombre).first()
+    exist = _exist(db, usuario_id, categoria.nombre)
     if exist:
         raise HTTPException(status_code = 400, detail = "Ya existe una categoria con ese nombre")
     
@@ -86,13 +98,8 @@ def update_categoria(id: str, categoria: CategoriaUpdate, db: Session = Depends(
             raise HTTPException(status_code=403, detail = "No esta autorizado para editar este campo")
         if str(categoria.usuario_id) != usuario_id:
             raise HTTPException(status_code=403, detail = "No esta autorizado para editar este campo")
-        if "nombre" in data:
-            exist = db.query(Categoria).filter(
-                Categoria.nombre == data["nombre"],
-                Categoria.id != id
-            ).first()
-            if exist:
-                raise HTTPException(status_code=400, detail="Ya existe una categoria con ese nombre")
+        if "nombre" in data and _exist(db, usuario_id, data["nombre"], categoria.id):
+            raise HTTPException(status_code=400, detail="Ya existe una categoria con ese nombre")
         
         for key, value in data.items():
             setattr(categoria, key, value)

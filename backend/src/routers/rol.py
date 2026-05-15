@@ -4,9 +4,7 @@ from src.database import get_db
 from src.models.rol import Rol
 from src.schemas.rol import RolCreate, RolResponse, RolResponseModel, RolUpdate
 from src.middleware.rol import permiso_admin
-from src.middleware.auth import verificar_token
 from typing import List
-from uuid import UUID
 
 router = APIRouter(prefix="/roles", tags=["Roles"])
 

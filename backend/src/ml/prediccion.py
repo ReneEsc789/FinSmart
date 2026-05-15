@@ -1,51 +1,60 @@
-import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from src.models.transaccion import Transaccion
-from src.database import get_db
-from sqlalchemy.orm import Session
 from fastapi import Depends
+from sklearn.linear_model import LinearRegression
+from sqlalchemy.orm import Session
+from src.database import get_db
+from src.ml.common import gasto_semanal, obtener_gastos_usuario
+
+
+def _filtrar_outliers(series: list[float]):
+    if len(series) < 4:
+        return series
+
+    desviacion = float(np.std(series))
+    if desviacion == 0:
+        return series
+
+    promedio = float(np.mean(series))
+    return [value for value in series if abs((value - promedio) / desviacion) < 2]
 
 
 def predecir_gasto(usuario_id, db: Session = Depends(get_db)):
-    transacciones = db.query(Transaccion).filter(
-        Transaccion.usuario_id == usuario_id,
-        Transaccion.tipo == "gasto"
-    ).all()
-    if len(transacciones) < 4:
-        return{
-            "prediccion": None, 
-            "mensaje": "Aun recopilando datos" 
-        }
-        
-    df = pd.DataFrame([{
-        "fecha": t.fecha,
-        "monto": t.monto
-    } for t in transacciones])
-    
-    df["semana"] = pd.to_datetime(df["fecha"]).dt.isocalendar().week
-    gasto_semanal = df.groupby("semana")["monto"].sum().reset_index()
-    
-    montos = gasto_semanal["monto"].values
-    z_scores = np.abs((montos - np.mean(montos)) / np.std(montos))
-    gasto_semanal = gasto_semanal[z_scores < 2]
+    transacciones = obtener_gastos_usuario(usuario_id, db)
+    semanas = gasto_semanal(transacciones)
 
-    if len(gasto_semanal) < 4:
+    if len(semanas) < 4:
         return {
             "prediccion": None,
-            "mensaje": "Aun recopilando datos"
-        }   
-    
-    x = gasto_semanal[["semana"]].values
-    y = gasto_semanal["monto"].values
-    
+            "mensaje": "Aun recopilando datos suficientes para generar una prediccion realista",
+            "promedio_semanal": None,
+            "tendencia": None,
+        }
+
+    montos = [float(semana["monto"]) for semana in semanas]
+    montos_filtrados = _filtrar_outliers(montos)
+
+    if len(montos_filtrados) < 4:
+        montos_filtrados = montos
+
+    x = np.arange(1, len(montos_filtrados) + 1).reshape(-1, 1)
+    y = np.array(montos_filtrados, dtype=float)
+
     modelo = LinearRegression()
     modelo.fit(x, y)
-    
-    proxima_semana = int(gasto_semanal["semana"].max()) + 1
-    prediccion = modelo.predict([[proxima_semana]])[0]
-    
+
+    prediccion = max(float(modelo.predict([[len(montos_filtrados) + 1]])[0]), 0.0)
+    promedio = float(np.mean(y))
+
+    if prediccion > promedio * 1.1:
+        tendencia = "alza"
+    elif prediccion < promedio * 0.9:
+        tendencia = "baja"
+    else:
+        tendencia = "estable"
+
     return {
-        "prediccion": round(float(prediccion), 2),
-        "mensaje": f"Se estima que gastaras ${round(float(prediccion), 2)} la proxima semana"
+        "prediccion": round(prediccion, 2),
+        "mensaje": f"Se estima que gastaras ${round(prediccion, 2)} la proxima semana",
+        "promedio_semanal": round(promedio, 2),
+        "tendencia": tendencia,
     }
