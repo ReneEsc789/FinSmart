@@ -54,7 +54,7 @@ export const Dashboard = () => {
   const alertMessage = budgetAlerts[0]?.mensaje ?? 'Sin alertas criticas por ahora.';
 
   return (
-    <div className="min-h-screen bg-transparent text-white pb-32 pt-10 px-6 lg:px-12">
+    <div className="min-h-screen overflow-x-hidden bg-transparent text-white pb-32 pt-10 px-4 sm:px-6 lg:px-12">
       <div className="max-w-6xl mx-auto space-y-10">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div className="space-y-2">
@@ -78,14 +78,14 @@ export const Dashboard = () => {
           </div>
         </header>
 
-        <div className={`w-full ${statusBg} border border-white/5 rounded-3xl p-4 flex items-center justify-between backdrop-blur-md`}>
-          <div className="flex items-center gap-3">
+        <div className={`w-full ${statusBg} border border-white/5 rounded-3xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 backdrop-blur-md overflow-hidden`}>
+          <div className="flex items-center gap-3 min-w-0">
             <div className={`w-3 h-3 rounded-full animate-pulse ${statusColor.replace('text', 'bg')}`} />
             <span className={`text-sm font-bold uppercase tracking-widest ${statusColor}`}>
               {budgetStatus === 'warning' ? 'Presupuesto en Riesgo' : budgetStatus === 'ok' ? 'Presupuesto Saludable' : 'Limite Excedido'}
             </span>
           </div>
-          <p className="text-xs text-gray-400 font-medium">
+          <p className="text-xs text-gray-400 font-medium break-words sm:text-right">
             {totalBudget > 0 ? `Has usado ${budgetUsage.toFixed(0)}% de tus presupuestos activos` : 'Aun no tienes presupuestos configurados'}
           </p>
         </div>
@@ -113,16 +113,16 @@ export const Dashboard = () => {
           {showAlert && (
             <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-80 transition-opacity" />
-              <div className="glass p-10 rounded-[3rem] relative z-10 border-purple-500/20">
+              <div className="glass p-6 sm:p-10 rounded-[3rem] relative z-10 border-purple-500/20 overflow-hidden">
                 <div className="flex flex-col lg:flex-row gap-12 items-center">
-                  <div className="flex-1 space-y-6">
+                  <div className="flex-1 min-w-0 space-y-6">
                     <div className="flex items-center gap-3">
                       <div className="bg-purple-600 p-2 rounded-xl">
                         <Brain className="text-white" size={20} />
                       </div>
                       <span className="text-purple-400 font-black uppercase tracking-[0.2em] text-xs">Analisis Predictivo FinSmart</span>
                     </div>
-                    <h2 className="text-4xl font-black leading-tight font-display">
+                    <h2 className="text-3xl sm:text-4xl font-black leading-tight font-display break-words">
                       {predictionAmount !== null ? (
                         <>
                           Proyeccion semanal: <span className="text-purple-500">${predictionAmount.toLocaleString()}</span>
@@ -131,7 +131,7 @@ export const Dashboard = () => {
                         'Todavia no hay suficientes datos para una prediccion confiable.'
                       )}
                     </h2>
-                    <p className="text-gray-400 text-lg leading-relaxed">{prediction?.mensaje ?? 'Agrega mas movimientos y presupuestos para activar la capa de ML.'}</p>
+                    <p className="text-gray-400 text-lg leading-relaxed break-words">{prediction?.mensaje ?? 'Agrega mas movimientos y presupuestos para activar la capa de ML.'}</p>
                     <div className="flex flex-wrap gap-4 pt-2">
                       <button onClick={() => navigate('/analysis')} className="bg-white text-black px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-purple-500 hover:text-white transition-all">
                         Ver Analisis <ArrowRight size={20} />
@@ -142,20 +142,20 @@ export const Dashboard = () => {
                     </div>
                   </div>
 
-                  <div className="w-full lg:w-72 space-y-4">
-                    <div className="glass p-6 rounded-3xl border-green-500/20">
+                  <div className="w-full lg:w-72 space-y-4 min-w-0">
+                    <div className="glass p-6 rounded-3xl border-green-500/20 overflow-hidden">
                       <div className="flex items-center gap-2 text-green-500 mb-2">
                         <Sparkles size={16} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Consejo IA</span>
                       </div>
-                      <p className="text-sm font-medium text-gray-300">{adviceMessage}</p>
+                      <p className="text-sm font-medium text-gray-300 break-words">{adviceMessage}</p>
                     </div>
-                    <div className="glass p-6 rounded-3xl border-red-500/20">
+                    <div className="glass p-6 rounded-3xl border-red-500/20 overflow-hidden">
                       <div className="flex items-center gap-2 text-red-500 mb-2">
                         <AlertCircle size={16} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Alerta Presupuesto</span>
                       </div>
-                      <p className="text-sm font-medium text-gray-300">{alertMessage}</p>
+                      <p className="text-sm font-medium text-gray-300 break-words">{alertMessage}</p>
                     </div>
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export const Dashboard = () => {
         </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="glass p-10 rounded-[3rem]">
+          <div className="glass p-6 sm:p-10 rounded-[3rem] overflow-hidden">
             <div className="flex justify-between items-center mb-10">
               <h3 className="text-2xl font-black font-display">Distribucion</h3>
             </div>
@@ -183,7 +183,7 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          <div className="glass p-10 rounded-[3rem]">
+          <div className="glass p-6 sm:p-10 rounded-[3rem] overflow-hidden">
             <div className="flex justify-between items-center mb-10">
               <h3 className="text-2xl font-black font-display">Flujo Semanal</h3>
             </div>

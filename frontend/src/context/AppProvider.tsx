@@ -7,15 +7,17 @@ import {
   getStoredToken,
   getStoredUserId,
   storeSession,
-} from '../services/api';
+} from '../api/api';
 import {
   createAccountRequest,
   createBudgetRequest,
   createCategoryRequest,
+  createGoalRequest,
   createTransactionRequest,
   deleteAccountRequest,
   deleteBudgetRequest,
   deleteCategoryRequest,
+  deleteGoalRequest,
   deleteTransactionRequest,
   deleteUserRequest,
   getAccounts,
@@ -23,6 +25,7 @@ import {
   getBudgetAlerts,
   getBudgets,
   getCategories,
+  getGoals,
   getPrediction,
   getTransactions,
   getUser,
@@ -34,10 +37,11 @@ import {
   type ApiBudget,
   type ApiBudgetAlert,
   type ApiCategory,
+  type ApiGoal,
   type ApiPrediction,
   type ApiTransaction,
   type ApiUser,
-} from '../services/finsmartApi';
+} from '../api/finsmartApi';
 import {
   AppContext,
   type Account,
@@ -49,6 +53,7 @@ import {
   type BudgetAlert,
   type Category,
   type CategoryInput,
+  type Goal,
   type PredictionInsight,
   type Transaction,
   type TransactionInput,
@@ -205,6 +210,15 @@ const buildAlerts = (alerts: ApiBudgetAlert[]): BudgetAlert[] =>
     proyeccionTotal: alert.proyeccion_total,
   }));
 
+const buildGoals = (goals: ApiGoal[]): Goal[] =>
+  goals.map((goal) => ({
+    id: goal.id,
+    name: goal.nombre,
+    target: goal.monto_objetivo,
+    current: goal.monto_actual,
+    color: goal.color,
+  }));
+
 const readStoredAlertSettings = (): AlertSettings => {
   const raw = localStorage.getItem(ALERT_SETTINGS_KEY);
   if (!raw) {
@@ -227,6 +241,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [prediction, setPrediction] = useState<PredictionInsight | null>(null);
   const [advice, setAdvice] = useState<AdviceInsight | null>(null);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getStoredToken()));
   const [alertSettings, setAlertSettings] = useState<AlertSettings>(readStoredAlertSettings);
@@ -240,6 +255,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPrediction(null);
     setAdvice(null);
     setBudgetAlerts([]);
+    setGoals([]);
   };
 
   const refreshInsights = useCallback(async () => {
@@ -286,12 +302,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoading(true);
     try {
-      const [userData, categoryData, accountData, budgetData, transactionData] = await Promise.all([
+      const [userData, categoryData, accountData, budgetData, transactionData, goalData] = await Promise.all([
         getUser(storedUserId),
         getCategories(),
         getAccounts(),
         getBudgets(),
         getTransactions(),
+        getGoals(),
       ]);
 
       const nextCategories = buildCategories(categoryData);
@@ -304,6 +321,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setAccounts(nextAccounts);
       setTransactions(nextTransactions);
       setBudgets(nextBudgets);
+      setGoals(buildGoals(goalData));
       setIsAuthenticated(true);
 
       await refreshInsights();
@@ -443,7 +461,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       await refreshData();
     } catch {
-      // ignore and keep current UI state
+      // keep current UI state if the deletion fails
     }
   };
 
@@ -477,7 +495,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await deleteAccountRequest(account.id);
       await refreshData();
     } catch {
-      // ignore and keep current UI state
+      // keep current UI state if the deletion fails
     }
   };
 
@@ -504,6 +522,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteTransaction = async (id: string) => {
     try {
       await deleteTransactionRequest(id);
+      await refreshData();
+    } catch {
+      // ignore and keep current UI state
+    }
+  };
+
+  const addGoal = async (goal: Omit<Goal, 'id' | 'color'> & { color?: string }) => {
+    try {
+      await createGoalRequest({
+        nombre: goal.name.trim(),
+        monto_objetivo: goal.target,
+        monto_actual: goal.current,
+        color: goal.color ?? '#8B5CF6',
+      });
+      await refreshData();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    try {
+      await deleteGoalRequest(id);
       await refreshData();
     } catch {
       // ignore and keep current UI state
@@ -560,6 +602,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         prediction,
         advice,
         budgetAlerts,
+        goals,
         login,
         register,
         logout,
@@ -571,6 +614,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteAccount,
         addTransaction,
         deleteTransaction,
+        addGoal,
+        deleteGoal,
         updateAlertSettings,
         updateUser,
         deleteCurrentUser,

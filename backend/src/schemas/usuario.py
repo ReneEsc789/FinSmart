@@ -33,6 +33,9 @@ class UsuarioUpdate(BaseModel):
             raise ValueError("El campo no puede estar vacio")
         return v
     
+    class Config:
+        extra = "forbid"
+    
 class UsuarioResponse(UsuarioBase):
     id: UUID
     rol_id: int

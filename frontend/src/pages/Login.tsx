@@ -89,8 +89,8 @@ export const Login = () => {
             </h3>
             <p className="text-gray-400 text-sm">
               {mode === 'login'
-                ? 'Inicia sesion con tus datos reales del backend'
-                : 'Tu cuenta se registrara y se conectara al backend automaticamente'}
+                ? 'Inicia sesion con los datos reales de tu cuenta'
+                : 'Tu cuenta se registrara y quedara lista para empezar a guardar movimientos'}
             </p>
           </div>
 

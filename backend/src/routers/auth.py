@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -8,14 +8,13 @@ from src.schemas.usuario import UsuarioCreate, UsuarioResponseModel
 from src.schemas.auth import UsuarioLogin, LoginResponse
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
+from src.utils.logger import logger
+from src.config.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from src.middleware.rate_limiter import limiter
 import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 def hashear_contrasena(contrasena):
     return pwd_context.hash(contrasena)
@@ -31,7 +30,8 @@ def crear_token(data: dict):
     return token
 
 @router.post("/registro", response_model= UsuarioResponseModel, status_code=201)
-def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/5minute")
+def registrar(request: Request, usuario: UsuarioCreate, db: Session = Depends(get_db)):
     correo_formato = usuario.email.strip().lower()
     
     exist = db.query(Usuario).filter(func.lower(Usuario.email) == correo_formato).first()
@@ -59,10 +59,12 @@ def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
         )
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error al registrar usuario: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno, por favor intente nuevamente")
     
 @router.post("/login", response_model=LoginResponse)
-def login(usuario: UsuarioLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/5minute")
+def login(request: Request, response: Response, usuario: UsuarioLogin, db: Session = Depends(get_db)):
     correo_formato = usuario.email.strip().lower()
     correo = db.query(Usuario).filter(func.lower(Usuario.email) == correo_formato).first()
     
@@ -79,6 +81,16 @@ def login(usuario: UsuarioLogin, db: Session = Depends(get_db)):
         )
     
     token = crear_token({"sub": str(correo.id), "rol": correo.rol_id})
+    
+    response.set_cookie (
+        key = "access_token",
+        value = token,
+        httponly = True,           
+        secure = os.getenv("ENVIRONMENT") == "production",           
+        samesite = "strict",      
+        max_age = 3600,            
+        path = "/"
+    )
     
     return LoginResponse(
         message = "Login exitoso",

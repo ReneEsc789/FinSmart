@@ -7,12 +7,24 @@
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-[#050507] text-white antialiased overflow-x-hidden font-sans;
   }
   
   h1, h2, h3, h4 {
     @apply font-display;
+  }
+
+  p, span, h1, h2, h3, h4, button, a {
+    overflow-wrap: anywhere;
   }
 }
 

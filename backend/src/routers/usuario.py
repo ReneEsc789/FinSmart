@@ -8,6 +8,7 @@ from src.middleware.rol import permiso_admin
 from src.middleware.auth import verificar_token
 from typing import List
 from uuid import UUID
+from sqlalchemy import func
 
 router = APIRouter(prefix="/usuarios", tags=["Usuario"])
 
@@ -59,12 +60,14 @@ def update_usuario(id: str, usuario: UsuarioUpdate, db: Session = Depends(get_db
         if rol_id != 1 and str(usuario.id) != usuario_id:
             raise HTTPException(status_code=403, detail="No esta autorizado para editar el usuario")
         if "email" in data:
+            email_formato = data["email"].lower()
             exist = db.query(Usuario).filter(
-                Usuario.email == data["email"],
+                func.lower(Usuario.email) == email_formato,
                 Usuario.id != id
             ).first()
             if exist:
                 raise HTTPException(status_code=400, detail="Ya existe un usuario con ese correo electronico ")
+            data["email"] = email_formato
         if "contrasena" in data:
             data["contrasena_hash"] = hashear_contrasena(data.pop("contrasena"))
         for key, value in data.items():

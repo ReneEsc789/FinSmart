@@ -104,6 +104,14 @@ export interface BudgetAlert {
   proyeccionTotal: number;
 }
 
+export interface Goal {
+  id: string;
+  name: string;
+  target: number;
+  current: number;
+  color: string;
+}
+
 export interface AuthResult {
   success: boolean;
   message?: string;
@@ -121,6 +129,7 @@ export interface AppContextType {
   prediction: PredictionInsight | null;
   advice: AdviceInsight | null;
   budgetAlerts: BudgetAlert[];
+  goals: Goal[];
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (payload: { name: string; email: string; password: string; currency: string }) => Promise<AuthResult>;
   logout: () => void;
@@ -132,6 +141,8 @@ export interface AppContextType {
   deleteAccount: (name: string) => Promise<void>;
   addTransaction: (tx: TransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  addGoal: (goal: Omit<Goal, 'id' | 'color'> & { color?: string }) => Promise<boolean>;
+  deleteGoal: (id: string) => Promise<void>;
   updateAlertSettings: (settings: Partial<AlertSettings>) => void;
   updateUser: (userInfo: Partial<AppUser>) => Promise<boolean>;
   deleteCurrentUser: () => Promise<boolean>;

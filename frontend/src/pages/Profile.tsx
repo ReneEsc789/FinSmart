@@ -125,7 +125,7 @@ export const Profile = () => {
                   </div>
                   <div>
                     <p className="text-lg font-black">Seguridad de la Cuenta</p>
-                    <p className="text-xs text-gray-500 font-medium">Flujo visual listo para backend futuro</p>
+                    <p className="text-xs text-gray-500 font-medium">Actualiza tu seguridad desde un flujo dedicado cuando habilites esa API.</p>
                   </div>
                 </div>
                 <ChevronRight size={24} className="text-gray-700 group-hover:text-white transition-colors" />
@@ -263,7 +263,7 @@ export const Profile = () => {
                 <AlertTriangle size={40} className="text-red-500" />
               </div>
               <h2 className="text-2xl font-black mb-2 text-red-500">Eliminar Cuenta?</h2>
-              <p className="text-gray-400 mb-8">Esto intentara borrar tu usuario desde el backend.</p>
+              <p className="text-gray-400 mb-8">Esto eliminara tu usuario y los datos asociados desde la API.</p>
               <div className="grid grid-cols-2 gap-4">
                 <button onClick={() => setShowDeleteConfirm(false)} className="py-4 rounded-2xl bg-white/5 font-bold hover:bg-white/10 transition-all">Cancelar</button>
                 <button

@@ -1,4 +1,4 @@
-import api from './api';
+import api from '../api/api';
 
 export interface LoginPayload {
   email: string;
@@ -92,6 +92,16 @@ export interface ApiBudgetAlert {
   gastado_actual: number;
   limite: number;
   proyeccion_total: number;
+}
+
+export interface ApiGoal {
+  id: string;
+  usuario_id: string;
+  nombre: string;
+  monto_objetivo: number;
+  monto_actual: number;
+  color: string;
+  fecha_creacion: string;
 }
 
 type MessageEnvelope<T> = {
@@ -201,5 +211,20 @@ export const getAdvice = async () => {
 
 export const getBudgetAlerts = async () => {
   const response = await api.get<ApiBudgetAlert[]>('/ml/alertas-presupuesto');
+  return response.data;
+};
+
+export const getGoals = async () => {
+  const response = await api.get<ApiGoal[]>('/metas-financieras/');
+  return response.data;
+};
+
+export const createGoalRequest = async (payload: Pick<ApiGoal, 'nombre' | 'monto_objetivo' | 'monto_actual' | 'color'>) => {
+  const response = await api.post<MessageEnvelope<ApiGoal>>('/metas-financieras/', payload);
+  return response.data;
+};
+
+export const deleteGoalRequest = async (goalId: string) => {
+  const response = await api.delete(`/metas-financieras/${goalId}`);
   return response.data;
 };
