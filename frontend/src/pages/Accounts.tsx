@@ -78,7 +78,7 @@ export const Accounts = () => {
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/20'
               }`}
             >
-              <Plus size={18} /> {customCategoriesCount >= 3 ? 'Limite alcanzado' : 'Nuevo limite'}
+              <Plus size={18} /> {customCategoriesCount >= 3 ? 'Maximo alcanzado' : 'Nuevo presupuesto'}
             </button>
           </div>
         </header>
@@ -218,7 +218,7 @@ export const Accounts = () => {
               className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-10 shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black font-display tracking-tight">Nuevo Limite</h2>
+                <h2 className="text-2xl font-black font-display tracking-tight">Nuevo Presupuesto</h2>
                 <button onClick={() => setIsAddingCategory(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
                   <X size={24} />
                 </button>
@@ -297,7 +297,7 @@ export const Accounts = () => {
                   type="submit"
                   className="w-full py-5 rounded-2xl bg-purple-600 hover:bg-purple-500 font-black text-xs uppercase tracking-[0.3em] transition-all shadow-xl shadow-purple-600/20"
                 >
-                  Guardar Limite
+                  Guardar Presupuesto
                 </button>
               </form>
             </motion.div>

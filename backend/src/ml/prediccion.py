@@ -22,15 +22,41 @@ def predecir_gasto(usuario_id, db: Session = Depends(get_db)):
     transacciones = obtener_gastos_usuario(usuario_id, db)
     semanas = gasto_semanal(transacciones)
 
-    if len(semanas) < 4:
+    if len(semanas) == 0:
         return {
             "prediccion": None,
-            "mensaje": "Aun recopilando datos suficientes para generar una prediccion realista",
+            "mensaje": "Aun no hay movimientos suficientes para proyectar tus gastos",
             "promedio_semanal": None,
             "tendencia": None,
         }
 
     montos = [float(semana["monto"]) for semana in semanas]
+
+    if len(montos) < 4:
+        promedio = float(np.mean(montos))
+        ultimo = float(montos[-1])
+        if len(montos) == 1:
+            prediccion = ultimo
+        else:
+            prediccion = (ultimo * 0.6) + (promedio * 0.4)
+
+        if ultimo > promedio * 1.1:
+            tendencia = "alza"
+        elif ultimo < promedio * 0.9:
+            tendencia = "baja"
+        else:
+            tendencia = "estable"
+
+        return {
+            "prediccion": round(max(prediccion, 0.0), 2),
+            "mensaje": (
+                "Prediccion temprana basada en tu historial reciente: "
+                f"podrias gastar ${round(max(prediccion, 0.0), 2)} la proxima semana"
+            ),
+            "promedio_semanal": round(promedio, 2),
+            "tendencia": tendencia,
+        }
+
     montos_filtrados = _filtrar_outliers(montos)
 
     if len(montos_filtrados) < 4:

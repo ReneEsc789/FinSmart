@@ -5,31 +5,92 @@ import { ArrowRight, BarChart3, BrainCircuit, Lightbulb, Sparkles, Trash2, Trend
 
 import { useApp } from '../context/AppContext';
 
+const goalPalette = [
+  '#8B5CF6',
+  '#EC4899',
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+];
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const getStartOfWeek = (date: Date) => {
+  const current = new Date(date);
+  const day = current.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  current.setHours(0, 0, 0, 0);
+  current.setDate(current.getDate() + diff);
+  return current;
+};
+
+const formatShortRange = (start: Date, end: Date) => {
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const startDay = String(start.getDate()).padStart(2, '0');
+  const endDay = String(end.getDate()).padStart(2, '0');
+  const startMonth = months[start.getMonth()];
+  const endMonth = months[end.getMonth()];
+
+  if (start.getMonth() === end.getMonth()) {
+    return `${startDay}-${endDay} ${startMonth}`;
+  }
+
+  return `${startDay} ${startMonth}-${endDay} ${endMonth}`;
+};
+
 export const Analysis = () => {
   const { transactions, prediction, advice, budgets, goals, addGoal, deleteGoal } = useApp();
   const [isAddingGoal, setIsAddingGoal] = React.useState(false);
   const [selectedTip, setSelectedTip] = React.useState<{ title: string; detail: string } | null>(null);
   const [newGoal, setNewGoal] = React.useState({ name: '', target: 0, current: 0, color: '#8B5CF6' });
+  const formatCurrency = (value: number | null | undefined) =>
+    typeof value === 'number'
+      ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '--';
+  const formatTooltipValue = (value: number | string | null | undefined) =>
+    typeof value === 'number' ? `$${formatCurrency(value)}` : '$0.00';
+  const today = new Date();
+  const currentWeekStart = getStartOfWeek(today);
 
   const weeklyExpenses = Array.from({ length: 4 }, (_, index) => {
-    const start = new Date();
-    start.setDate(start.getDate() - (27 - index * 7));
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    const start = addDays(currentWeekStart, (index - 3) * 7);
+    const end = addDays(start, 6);
 
     const total = transactions
       .filter((transaction) => {
-        const currentDate = new Date(transaction.date);
+        const currentDate = new Date(`${transaction.date}T00:00:00`);
         return transaction.type === 'expense' && currentDate >= start && currentDate <= end;
       })
       .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
     return {
-      name: `Sem ${index + 1}`,
+      label: formatShortRange(start, end),
       actual: total,
-      predicted: index === 3 ? prediction?.prediccion ?? total : null,
+      predicted: null,
+      kind: 'historical' as const,
+      rangeLabel: formatShortRange(start, end),
     };
   });
+
+  const nextWeekStart = addDays(currentWeekStart, 7);
+  const nextWeekEnd = addDays(nextWeekStart, 6);
+  const nextWeekLabel = formatShortRange(nextWeekStart, nextWeekEnd);
+
+  const chartData = [
+    ...weeklyExpenses,
+    {
+      label: 'Semana sig.',
+      actual: null,
+      predicted: prediction?.prediccion ?? null,
+      kind: 'prediction' as const,
+      rangeLabel: nextWeekLabel,
+    },
+  ];
 
   const handleAddGoal = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -81,7 +142,7 @@ export const Analysis = () => {
           </div>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={weeklyExpenses}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
@@ -89,11 +150,23 @@ export const Analysis = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                <XAxis dataKey="name" stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                <XAxis dataKey="label" stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                 <YAxis stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#0a0a0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '12px' }} itemStyle={{ color: '#fff', fontWeight: 'bold' }} />
-                <Area type="monotone" dataKey="actual" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorActual)" />
-                <Area type="monotone" dataKey="predicted" stroke="#10b981" strokeWidth={2} strokeDasharray="8 8" fillOpacity={0} />
+                <Tooltip
+                  labelFormatter={(_, payload) => {
+                    const point = payload?.[0]?.payload;
+                    return point?.rangeLabel ? `Semana ${point.rangeLabel}` : 'Semana';
+                  }}
+                  formatter={(value, _name, item) => {
+                    const point = item?.payload as { kind?: 'historical' | 'prediction' } | undefined;
+                    const seriesLabel = point?.kind === 'prediction' ? 'Prediccion' : 'Real';
+                    return [formatTooltipValue(value as number | string | null | undefined), seriesLabel];
+                  }}
+                  contentStyle={{ backgroundColor: '#0a0a0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '12px' }}
+                  itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="actual" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorActual)" connectNulls={false} />
+                <Area type="monotone" dataKey="predicted" stroke="#10b981" strokeWidth={3} strokeDasharray="8 8" fillOpacity={0} connectNulls={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -104,7 +177,9 @@ export const Analysis = () => {
             <div className="flex-1 min-w-0 text-center md:text-left">
               <p className="text-xs font-black text-purple-400 uppercase tracking-[0.3em] mb-2">Resumen</p>
               <p className="text-xl text-gray-200 leading-relaxed break-words">
-                {prediction?.mensaje ?? 'Aun no hay suficientes datos para una prediccion robusta.'}
+                {prediction?.prediccion
+                  ? `Se estima que gastaras $${formatCurrency(prediction.prediccion)} en la semana ${nextWeekLabel}.`
+                  : 'Aun no hay suficientes datos para una prediccion robusta.'}
               </p>
             </div>
           </div>
@@ -241,9 +316,27 @@ export const Analysis = () => {
                       <input type="number" min="0" value={newGoal.current === 0 ? '' : newGoal.current} onChange={(event) => setNewGoal({ ...newGoal, current: event.target.value === '' ? 0 : Number(event.target.value) })} className="w-full bg-white/5 border border-white/5 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium" />
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <label className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black ml-2">Color</label>
-                    <input type="color" value={newGoal.color} onChange={(event) => setNewGoal({ ...newGoal, color: event.target.value })} className="h-14 w-full bg-white/5 border border-white/5 rounded-2xl p-3" />
+                    <div className="grid grid-cols-3 gap-3">
+                      {goalPalette.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewGoal({ ...newGoal, color })}
+                          className={`h-14 rounded-2xl border transition-all ${newGoal.color === color ? 'border-white scale-[1.03]' : 'border-white/10'}`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Seleccionar color ${color}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 flex items-center justify-between gap-4">
+                      <span className="text-sm text-gray-300">Color seleccionado</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-6 h-6 rounded-full border border-white/20" style={{ backgroundColor: newGoal.color }} />
+                        <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">{newGoal.color}</span>
+                      </div>
+                    </div>
                   </div>
                   <button type="submit" className="w-full py-5 rounded-2xl bg-purple-600 hover:bg-purple-500 font-black text-xs uppercase tracking-[0.3em] transition-all shadow-xl shadow-purple-600/20">
                     Crear Meta

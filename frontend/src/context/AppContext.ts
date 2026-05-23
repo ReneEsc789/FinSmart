@@ -52,6 +52,10 @@ export interface TransactionInput {
   note?: string;
 }
 
+export interface TransactionUpdateInput extends TransactionInput {
+  id: string;
+}
+
 export interface Budget {
   id: string;
   categoryId: string;
@@ -71,6 +75,15 @@ export interface AppUser {
   email: string;
   currency: string;
   avatar: string;
+}
+
+export interface UserUpdateInput {
+  name?: string;
+  email?: string;
+  currency?: string;
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
 }
 
 export interface AlertSettings {
@@ -140,11 +153,12 @@ export interface AppContextType {
   addAccount: (acc: AccountInput) => Promise<boolean>;
   deleteAccount: (name: string) => Promise<void>;
   addTransaction: (tx: TransactionInput) => Promise<void>;
+  updateTransaction: (tx: TransactionUpdateInput) => Promise<boolean>;
   deleteTransaction: (id: string) => Promise<void>;
   addGoal: (goal: Omit<Goal, 'id' | 'color'> & { color?: string }) => Promise<boolean>;
   deleteGoal: (id: string) => Promise<void>;
   updateAlertSettings: (settings: Partial<AlertSettings>) => void;
-  updateUser: (userInfo: Partial<AppUser>) => Promise<boolean>;
+  updateUser: (userInfo: UserUpdateInput) => Promise<AuthResult>;
   deleteCurrentUser: () => Promise<boolean>;
 }
 

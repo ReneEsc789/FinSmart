@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models.usuario import Usuario
-from src.routers.auth import hashear_contrasena
+from src.routers.auth import hashear_contrasena, verificar_contrasena
 from src.schemas.usuario import UsuarioResponse, UsuarioResponseModel, UsuarioUpdate
 from src.middleware.rol import permiso_admin
 from src.middleware.auth import verificar_token
@@ -53,12 +53,15 @@ def update_usuario(id: str, usuario: UsuarioUpdate, db: Session = Depends(get_db
     data = usuario.model_dump(exclude_unset=True)    
     if not data:
         raise HTTPException(status_code=400, detail="Debes enviar al menos un campo para actualizar")
+    
     try:
         usuario = db.query(Usuario).filter(Usuario.id == id).first()
         if not usuario:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
         if rol_id != 1 and str(usuario.id) != usuario_id:
             raise HTTPException(status_code=403, detail="No esta autorizado para editar el usuario")
+        
         if "email" in data:
             email_formato = data["email"].lower()
             exist = db.query(Usuario).filter(
@@ -66,12 +69,26 @@ def update_usuario(id: str, usuario: UsuarioUpdate, db: Session = Depends(get_db
                 Usuario.id != id
             ).first()
             if exist:
-                raise HTTPException(status_code=400, detail="Ya existe un usuario con ese correo electronico ")
+                raise HTTPException(status_code=400, detail="Ya existe un usuario con ese correo electronico")
             data["email"] = email_formato
-        if "contrasena" in data:
-            data["contrasena_hash"] = hashear_contrasena(data.pop("contrasena"))
+            
+        if "contrasena_nueva" in data:
+            contrasena_actual = data.pop("contrasena_actual", None)
+            contrasena_nueva = data.pop("contrasena_nueva", None)
+            data.pop("confirmar_contrasena", None)
+            
+            if not verificar_contrasena(contrasena_actual, usuario.contrasena_hash):
+                raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+            data["contrasena_hash"] = hashear_contrasena(contrasena_nueva)
+        else:
+            data.pop("contrasena_actual", None)
+            data.pop("contrasena_nueva", None)
+            data.pop("confirmar_contrasena", None)
+                
         for key, value in data.items():
             setattr(usuario, key, value)
+            
         db.commit()
         db.refresh(usuario)
         return UsuarioResponseModel(message="Usuario actualizado correctamente", data=usuario)

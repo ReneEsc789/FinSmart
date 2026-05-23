@@ -11,6 +11,9 @@ from src.models.transaccion import Transaccion
 def verificar_presupuestos(usuario_id, db: Session = Depends(get_db)):
     presupuestos = db.query(Presupuesto).filter(Presupuesto.usuario_id == usuario_id).all()
     alertas = []
+    resultado = predecir_gasto(usuario_id, db)
+    prediccion_monto = float(resultado.get("prediccion") or 0)
+    promedio_semanal = float(resultado.get("promedio_semanal") or 0)
     
     for presupuesto in presupuestos:
         transacciones = (
@@ -23,9 +26,6 @@ def verificar_presupuestos(usuario_id, db: Session = Depends(get_db)):
             ).all()
         )
         total_gasto = round(sum(float(transaccion.monto) for transaccion in transacciones), 2)
-        resultado = predecir_gasto(usuario_id, db)
-        prediccion_monto = float(resultado.get("prediccion") or 0)
-        promedio_semanal = float(resultado.get("promedio_semanal") or 0)
         if prediccion_monto > 0:
             proyeccion_total = round(max(total_gasto, prediccion_monto), 2)
         elif promedio_semanal > 0:
@@ -67,6 +67,7 @@ def verificar_presupuestos(usuario_id, db: Session = Depends(get_db)):
                     )
                 )
 
-    db.commit()
+    if db.new:
+        db.commit()
     return alertas
     

@@ -18,11 +18,14 @@ import {
 import { useApp } from '../context/AppContext';
 
 export const Transactions = () => {
-  const { categories, accounts, transactions, addTransaction, deleteTransaction } = useApp();
+  const { categories, accounts, transactions, addTransaction, updateTransaction, deleteTransaction } = useApp();
+  const INITIAL_VISIBLE_TRANSACTIONS = 20;
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_TRANSACTIONS);
   const [newTransaction, setNewTransaction] = useState({
     type: 'expense' as 'income' | 'expense',
     amount: 0,
@@ -30,7 +33,25 @@ export const Transactions = () => {
     category: '',
     account: '',
     note: '',
+    date: new Date().toISOString().slice(0, 10),
   });
+
+  const normalizeDateInput = (value: string) => value.slice(0, 10);
+
+  const resetForm = () => {
+    setEditingTransactionId(null);
+    setIsAdding(false);
+    setStep(1);
+    setNewTransaction({
+      type: 'expense',
+      amount: 0,
+      name: '',
+      category: '',
+      account: '',
+      note: '',
+      date: new Date().toISOString().slice(0, 10),
+    });
+  };
 
   const handleAmountChange = (delta: number) => {
     setNewTransaction((current) => ({
@@ -47,7 +68,7 @@ export const Transactions = () => {
     }));
   };
 
-  const handleAddTransaction = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (step < 3) {
@@ -55,27 +76,54 @@ export const Transactions = () => {
       return;
     }
 
-    await addTransaction({
-      name: newTransaction.name,
-      category: newTransaction.category,
-      amount: newTransaction.amount,
-      date: new Date().toISOString().slice(0, 10),
-      account: newTransaction.account,
-      type: newTransaction.type,
-      note: newTransaction.note,
-    });
+    if (editingTransactionId) {
+      const success = await updateTransaction({
+        id: editingTransactionId,
+        name: newTransaction.name,
+        category: newTransaction.category,
+        amount: newTransaction.amount,
+        date: newTransaction.date,
+        account: newTransaction.account,
+        type: newTransaction.type,
+        note: newTransaction.note,
+      });
 
-    setIsAdding(false);
-    setStep(1);
-    setNewTransaction({
-      type: 'expense',
-      amount: 0,
-      name: '',
-      category: '',
-      account: '',
-      note: '',
-    });
+      if (!success) {
+        return;
+      }
+    } else {
+      await addTransaction({
+        name: newTransaction.name,
+        category: newTransaction.category,
+        amount: newTransaction.amount,
+        date: newTransaction.date,
+        account: newTransaction.account,
+        type: newTransaction.type,
+        note: newTransaction.note,
+      });
+    }
+
+    resetForm();
   };
+
+  const handleEditTransaction = (transaction: (typeof transactions)[number]) => {
+    setEditingTransactionId(transaction.id);
+    setNewTransaction({
+      type: transaction.type,
+      amount: Math.abs(transaction.amount),
+      name: transaction.name,
+      category: transaction.category,
+      account: transaction.account,
+      note: transaction.note ?? '',
+      date: normalizeDateInput(transaction.date),
+    });
+    setStep(1);
+    setIsAdding(true);
+  };
+
+  const amountLength = newTransaction.amount === 0 ? 1 : String(newTransaction.amount).length;
+  const amountSizeClass =
+    amountLength >= 10 ? 'text-[clamp(2.75rem,8vw,5rem)]' : amountLength >= 7 ? 'text-[clamp(3.5rem,9vw,6rem)]' : 'text-[clamp(4.5rem,10vw,8rem)]';
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
@@ -84,6 +132,9 @@ export const Transactions = () => {
     const matchesFilter = filter === 'all' || transaction.type === filter;
     return matchesSearch && matchesFilter;
   });
+
+  const visibleTransactions = filteredTransactions.slice(0, visibleCount);
+  const hasMoreTransactions = visibleCount < filteredTransactions.length;
 
   return (
     <div className="min-h-screen bg-transparent text-white pb-32 pt-10 px-6 lg:px-12">
@@ -95,8 +146,8 @@ export const Transactions = () => {
           </div>
           <button
             onClick={() => {
+              resetForm();
               setIsAdding(true);
-              setStep(1);
             }}
             disabled={categories.length === 0 || accounts.length === 0}
             className="bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95"
@@ -113,7 +164,10 @@ export const Transactions = () => {
               type="text"
               placeholder="Buscar por nombre o categoria..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setVisibleCount(INITIAL_VISIBLE_TRANSACTIONS);
+              }}
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-medium"
             />
           </div>
@@ -121,7 +175,10 @@ export const Transactions = () => {
             {(['all', 'income', 'expense'] as const).map((value) => (
               <button
                 key={value}
-                onClick={() => setFilter(value)}
+                onClick={() => {
+                  setFilter(value);
+                  setVisibleCount(INITIAL_VISIBLE_TRANSACTIONS);
+                }}
                 className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                   filter === value ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'
                 }`}
@@ -134,7 +191,7 @@ export const Transactions = () => {
 
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {filteredTransactions.map((transaction) => (
+            {visibleTransactions.map((transaction) => (
               <motion.div
                 key={transaction.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -171,7 +228,7 @@ export const Transactions = () => {
                     {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toLocaleString()}
                   </p>
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all mt-2">
-                    <button className="p-2 bg-white/5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                    <button onClick={() => handleEditTransaction(transaction)} className="p-2 bg-white/5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                       <Edit2 size={16} />
                     </button>
                     <button
@@ -191,13 +248,25 @@ export const Transactions = () => {
               <p className="text-gray-500">No se encontraron transacciones</p>
             </div>
           )}
+
+          {hasMoreTransactions && (
+            <div className="flex justify-center pt-4">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((current) => current + INITIAL_VISIBLE_TRANSACTIONS)}
+                className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-black uppercase tracking-[0.18em] text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              >
+                Cargar mas
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       <AnimatePresence>
         {isAdding && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAdding(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetForm} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -210,15 +279,15 @@ export const Transactions = () => {
 
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-black font-display tracking-tight">Nuevo Registro</h2>
+                  <h2 className="text-2xl font-black font-display tracking-tight">{editingTransactionId ? 'Editar Registro' : 'Nuevo Registro'}</h2>
                   <p className="text-xs text-gray-500 font-black uppercase tracking-widest mt-1">Paso {step} de 3</p>
                 </div>
-                <button onClick={() => setIsAdding(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
+                <button onClick={resetForm} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
                   <Plus size={24} className="rotate-45" />
                 </button>
               </div>
 
-              <form className="space-y-8" onSubmit={handleAddTransaction}>
+              <form className="space-y-8" onSubmit={handleSubmit}>
                 <AnimatePresence mode="wait">
                   {step === 1 && (
                     <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
@@ -245,9 +314,9 @@ export const Transactions = () => {
 
                       <div className="text-center space-y-4 py-8">
                         <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black">Monto del movimiento</p>
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 min-w-0">
                           <span className={`text-5xl font-black transition-colors ${newTransaction.type === 'expense' ? 'text-red-500/50' : 'text-green-500/50'}`}>$</span>
-                          <div className="flex items-center gap-6">
+                          <div className="flex items-center justify-center gap-4 sm:gap-6 w-full min-w-0">
                             <input
                               type="number"
                               required
@@ -255,11 +324,11 @@ export const Transactions = () => {
                               value={newTransaction.amount === 0 ? '' : newTransaction.amount}
                               placeholder="0"
                               onChange={handleInputChange}
-                              className={`text-8xl font-black tracking-tighter bg-transparent border-none focus:outline-none w-64 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${
+                              className={`${amountSizeClass} font-black tracking-tighter bg-transparent border-none focus:outline-none w-full max-w-[26rem] min-w-0 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${
                                 newTransaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
                               }`}
                             />
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2 shrink-0">
                               <button type="button" onClick={() => handleAmountChange(100)} className="p-2 hover:bg-white/5 rounded-xl text-gray-500 hover:text-white transition-colors">
                                 <Plus size={20} />
                               </button>
@@ -334,18 +403,30 @@ export const Transactions = () => {
 
                   {step === 3 && (
                     <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black ml-2">Concepto</label>
-                        <div className="relative">
-                          <Edit2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black ml-2">Concepto</label>
+                          <div className="relative">
+                            <Edit2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                            <input
+                              type="text"
+                              required
+                              autoFocus
+                              value={newTransaction.name}
+                              onChange={(event) => setNewTransaction({ ...newTransaction, name: event.target.value })}
+                              placeholder="Ej: Cena con amigos"
+                              className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium text-lg"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black ml-2">Fecha</label>
                           <input
-                            type="text"
+                            type="date"
                             required
-                            autoFocus
-                            value={newTransaction.name}
-                            onChange={(event) => setNewTransaction({ ...newTransaction, name: event.target.value })}
-                            placeholder="Ej: Cena con amigos"
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium text-lg"
+                            value={newTransaction.date}
+                            onChange={(event) => setNewTransaction({ ...newTransaction, date: event.target.value })}
+                            className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 px-6 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium text-lg"
                           />
                         </div>
                       </div>
@@ -384,7 +465,7 @@ export const Transactions = () => {
                   >
                     {step === 3 ? (
                       <>
-                        Finalizar <Check size={18} />
+                        {editingTransactionId ? 'Guardar' : 'Finalizar'} <Check size={18} />
                       </>
                     ) : (
                       <>

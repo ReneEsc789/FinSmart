@@ -1,0 +1,6 @@
+ALTER TABLE usuarios
+ADD COLUMN reset_code VARCHAR(6) NULL,
+ADD COLUMN reset_code_expires_at TIMESTAMP NULL,
+ADD COLUMN reset_code_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ADD COLUMN reset_code_attempts INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN reset_code_last_sent_at TIMESTAMP NULL;

@@ -4,8 +4,8 @@ from passlib.context import CryptContext
 from jose import jwt
 from src.database import get_db
 from src.models.usuario import Usuario
-from src.schemas.usuario import UsuarioCreate, UsuarioResponseModel
-from src.schemas.auth import UsuarioLogin, LoginResponse
+from src.schemas.usuario import UsuarioResponseModel
+from src.schemas.auth import UsuarioLogin, LoginResponse, UsuarioRegistro
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from src.utils.logger import logger
@@ -31,7 +31,7 @@ def crear_token(data: dict):
 
 @router.post("/registro", response_model= UsuarioResponseModel, status_code=201)
 @limiter.limit("5/5minute")
-def registrar(request: Request, usuario: UsuarioCreate, db: Session = Depends(get_db)):
+def registrar(request: Request, usuario: UsuarioRegistro, db: Session = Depends(get_db)):
     correo_formato = usuario.email.strip().lower()
     
     exist = db.query(Usuario).filter(func.lower(Usuario.email) == correo_formato).first()
@@ -42,13 +42,12 @@ def registrar(request: Request, usuario: UsuarioCreate, db: Session = Depends(ge
         )
     
     try:
-    
         nuevo_usuario = Usuario(
             nombre = usuario.nombre,
             email = correo_formato,
             contrasena_hash = hashear_contrasena(usuario.contrasena),
             moneda = usuario.moneda or "MXN",
-            rol_id = usuario.rol_id or 2
+            rol_id = 2
         )
         db.add(nuevo_usuario)
         db.commit()

@@ -104,6 +104,14 @@ export interface ApiGoal {
   fecha_creacion: string;
 }
 
+export interface ApiTransactionListResponse {
+  items: ApiTransaction[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 type MessageEnvelope<T> = {
   message: string;
   data: T;
@@ -124,7 +132,14 @@ export const getUser = async (userId: string) => {
   return response.data;
 };
 
-export const updateUserRequest = async (userId: string, payload: Partial<Pick<ApiUser, 'nombre' | 'email' | 'moneda'>> & { contrasena?: string }) => {
+export const updateUserRequest = async (
+  userId: string,
+  payload: Partial<Pick<ApiUser, 'nombre' | 'email' | 'moneda'>> & {
+    contrasena_actual?: string;
+    contrasena_nueva?: string;
+    confirmar_contrasena?: string;
+  },
+) => {
   const response = await api.patch<MessageEnvelope<ApiUser>>(`/usuarios/${userId}`, payload);
   return response.data;
 };
@@ -184,13 +199,18 @@ export const deleteBudgetRequest = async (budgetId: string) => {
   return response.data;
 };
 
-export const getTransactions = async () => {
-  const response = await api.get<ApiTransaction[]>('/transacciones/');
+export const getTransactions = async (params?: { limit?: number; offset?: number }) => {
+  const response = await api.get<ApiTransactionListResponse>('/transacciones/', { params });
   return response.data;
 };
 
 export const createTransactionRequest = async (payload: Pick<ApiTransaction, 'categoria_id' | 'cuenta_id' | 'monto' | 'tipo' | 'nota' | 'fecha'>) => {
   const response = await api.post<MessageEnvelope<ApiTransaction>>('/transacciones/', payload);
+  return response.data;
+};
+
+export const updateTransactionRequest = async (transactionId: string, payload: Partial<Pick<ApiTransaction, 'categoria_id' | 'cuenta_id' | 'monto' | 'tipo' | 'nota' | 'fecha'>>) => {
+  const response = await api.patch<MessageEnvelope<ApiTransaction>>(`/transacciones/${transactionId}`, payload);
   return response.data;
 };
 

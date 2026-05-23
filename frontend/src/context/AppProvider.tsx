@@ -32,6 +32,7 @@ import {
   loginRequest,
   registerRequest,
   updateBudgetRequest,
+  updateTransactionRequest,
   updateUserRequest,
   type ApiAccount,
   type ApiBudget,
@@ -40,6 +41,7 @@ import {
   type ApiGoal,
   type ApiPrediction,
   type ApiTransaction,
+  type ApiTransactionListResponse,
   type ApiUser,
 } from '../api/finsmartApi';
 import {
@@ -57,6 +59,8 @@ import {
   type PredictionInsight,
   type Transaction,
   type TransactionInput,
+  type TransactionUpdateInput,
+  type UserUpdateInput,
 } from './AppContext';
 
 const defaultAlertSettings: AlertSettings = {
@@ -165,6 +169,26 @@ const buildTransactions = (
     };
   });
 
+const getAllTransactions = async () => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const items: ApiTransaction[] = [];
+
+  while (hasMore) {
+    const page: ApiTransactionListResponse = await getTransactions({ limit, offset });
+    items.push(...page.items);
+    hasMore = page.has_more;
+    offset += page.items.length;
+
+    if (page.items.length === 0) {
+      break;
+    }
+  }
+
+  return items;
+};
+
 const buildBudgets = (
   budgets: ApiBudget[],
   categories: Category[],
@@ -230,6 +254,30 @@ const readStoredAlertSettings = (): AlertSettings => {
   } catch {
     return defaultAlertSettings;
   }
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const normalizeErrorMessage = (message: string) =>
+    message.replace(/^Value error,\s*/i, '').trim();
+
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return fallback;
+  }
+
+  const detail = (error as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+
+  if (typeof detail === 'string') {
+    return normalizeErrorMessage(detail);
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const firstIssue = detail[0] as { msg?: string } | undefined;
+    if (typeof firstIssue?.msg === 'string') {
+      return normalizeErrorMessage(firstIssue.msg);
+    }
+  }
+
+  return fallback;
 };
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -307,7 +355,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         getCategories(),
         getAccounts(),
         getBudgets(),
-        getTransactions(),
+        getAllTransactions(),
         getGoals(),
       ]);
 
@@ -350,15 +398,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await refreshData();
       return { success: true };
     } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
-          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : 'No se pudo iniciar sesion';
-
-      return { success: false, message };
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo iniciar sesion') };
     }
   };
 
@@ -373,15 +413,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       return await login(payload.email, payload.password);
     } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
-          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : 'No se pudo registrar la cuenta';
-
-      return { success: false, message };
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo registrar la cuenta') };
     }
   };
 
@@ -528,6 +560,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateTransaction = async (transaction: TransactionUpdateInput) => {
+    const category = categories.find((item) => item.nombre === transaction.category);
+    const account = accounts.find((item) => item.name === transaction.account);
+
+    if (!category || !account) {
+      return false;
+    }
+
+    try {
+      await updateTransactionRequest(transaction.id, {
+        categoria_id: category.id,
+        cuenta_id: account.id,
+        monto: Math.abs(transaction.amount),
+        tipo: transaction.type === 'expense' ? 'gasto' : 'ingreso',
+        nota: transaction.note?.trim() ? transaction.note.trim() : transaction.name.trim(),
+        fecha: transaction.date,
+      });
+      await refreshData();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const addGoal = async (goal: Omit<Goal, 'id' | 'color'> & { color?: string }) => {
     try {
       await createGoalRequest({
@@ -556,9 +612,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setAlertSettings((current) => ({ ...current, ...settings }));
   };
 
-  const updateUser = async (userInfo: Partial<AppUser>) => {
+  const updateUser = async (userInfo: UserUpdateInput) => {
     if (!user) {
-      return false;
+      return { success: false, message: 'No hay una sesion activa' };
     }
 
     try {
@@ -566,11 +622,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         nombre: userInfo.name ?? user.name,
         email: userInfo.email ?? user.email,
         moneda: userInfo.currency ?? user.currency,
+        contrasena_actual: userInfo.currentPassword,
+        contrasena_nueva: userInfo.newPassword,
+        confirmar_contrasena: userInfo.confirmPassword,
       });
       await refreshData();
-      return true;
-    } catch {
-      return false;
+      return { success: true };
+    } catch (error: unknown) {
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo actualizar la cuenta') };
     }
   };
 
@@ -613,6 +672,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addAccount,
         deleteAccount,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         addGoal,
         deleteGoal,
