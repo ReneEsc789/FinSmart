@@ -9,3 +9,4 @@ pydantic[email]
 scikit-learn
 pandas
 numpy
+slowapi == 0.1.9

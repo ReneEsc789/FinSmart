@@ -12,6 +12,14 @@ class TransaccionBase(BaseModel):
 class TransaccionCreate(TransaccionBase):
     cuenta_id: UUID
     categoria_id: UUID
+
+class TransaccionUpdate(BaseModel):
+    monto: Optional[float] = None
+    tipo: Optional[Literal["gasto", "ingreso"]] = None
+    nota: Optional[str] = None
+    fecha: Optional[datetime] = None
+    cuenta_id: Optional[UUID] = None
+    categoria_id: Optional[UUID] = None
    
 class TransaccionResponse(TransaccionBase):
     id: UUID
@@ -26,6 +34,16 @@ class TransaccionResponse(TransaccionBase):
 class TransaccionResponseModel(BaseModel):
     message: str
     data: Optional[TransaccionResponse] = None
+    
+    class Config:
+        from_attributes = True
+
+class TransaccionListResponse(BaseModel):
+    items: list[TransaccionResponse]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
     
     class Config:
         from_attributes = True

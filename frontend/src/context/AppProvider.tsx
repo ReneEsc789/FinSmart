@@ -7,15 +7,17 @@ import {
   getStoredToken,
   getStoredUserId,
   storeSession,
-} from '../services/api';
+} from '../api/api';
 import {
   createAccountRequest,
   createBudgetRequest,
   createCategoryRequest,
+  createGoalRequest,
   createTransactionRequest,
   deleteAccountRequest,
   deleteBudgetRequest,
   deleteCategoryRequest,
+  deleteGoalRequest,
   deleteTransactionRequest,
   deleteUserRequest,
   getAccounts,
@@ -23,21 +25,25 @@ import {
   getBudgetAlerts,
   getBudgets,
   getCategories,
+  getGoals,
   getPrediction,
   getTransactions,
   getUser,
   loginRequest,
   registerRequest,
   updateBudgetRequest,
+  updateTransactionRequest,
   updateUserRequest,
   type ApiAccount,
   type ApiBudget,
   type ApiBudgetAlert,
   type ApiCategory,
+  type ApiGoal,
   type ApiPrediction,
   type ApiTransaction,
+  type ApiTransactionListResponse,
   type ApiUser,
-} from '../services/finsmartApi';
+} from '../api/finsmartApi';
 import {
   AppContext,
   type Account,
@@ -49,9 +55,12 @@ import {
   type BudgetAlert,
   type Category,
   type CategoryInput,
+  type Goal,
   type PredictionInsight,
   type Transaction,
   type TransactionInput,
+  type TransactionUpdateInput,
+  type UserUpdateInput,
 } from './AppContext';
 
 const defaultAlertSettings: AlertSettings = {
@@ -160,6 +169,26 @@ const buildTransactions = (
     };
   });
 
+const getAllTransactions = async () => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const items: ApiTransaction[] = [];
+
+  while (hasMore) {
+    const page: ApiTransactionListResponse = await getTransactions({ limit, offset });
+    items.push(...page.items);
+    hasMore = page.has_more;
+    offset += page.items.length;
+
+    if (page.items.length === 0) {
+      break;
+    }
+  }
+
+  return items;
+};
+
 const buildBudgets = (
   budgets: ApiBudget[],
   categories: Category[],
@@ -205,6 +234,15 @@ const buildAlerts = (alerts: ApiBudgetAlert[]): BudgetAlert[] =>
     proyeccionTotal: alert.proyeccion_total,
   }));
 
+const buildGoals = (goals: ApiGoal[]): Goal[] =>
+  goals.map((goal) => ({
+    id: goal.id,
+    name: goal.nombre,
+    target: goal.monto_objetivo,
+    current: goal.monto_actual,
+    color: goal.color,
+  }));
+
 const readStoredAlertSettings = (): AlertSettings => {
   const raw = localStorage.getItem(ALERT_SETTINGS_KEY);
   if (!raw) {
@@ -218,6 +256,30 @@ const readStoredAlertSettings = (): AlertSettings => {
   }
 };
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const normalizeErrorMessage = (message: string) =>
+    message.replace(/^Value error,\s*/i, '').trim();
+
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return fallback;
+  }
+
+  const detail = (error as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+
+  if (typeof detail === 'string') {
+    return normalizeErrorMessage(detail);
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const firstIssue = detail[0] as { msg?: string } | undefined;
+    if (typeof firstIssue?.msg === 'string') {
+      return normalizeErrorMessage(firstIssue.msg);
+    }
+  }
+
+  return fallback;
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -227,6 +289,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [prediction, setPrediction] = useState<PredictionInsight | null>(null);
   const [advice, setAdvice] = useState<AdviceInsight | null>(null);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getStoredToken()));
   const [alertSettings, setAlertSettings] = useState<AlertSettings>(readStoredAlertSettings);
@@ -240,6 +303,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPrediction(null);
     setAdvice(null);
     setBudgetAlerts([]);
+    setGoals([]);
   };
 
   const refreshInsights = useCallback(async () => {
@@ -286,12 +350,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoading(true);
     try {
-      const [userData, categoryData, accountData, budgetData, transactionData] = await Promise.all([
+      const [userData, categoryData, accountData, budgetData, transactionData, goalData] = await Promise.all([
         getUser(storedUserId),
         getCategories(),
         getAccounts(),
         getBudgets(),
-        getTransactions(),
+        getAllTransactions(),
+        getGoals(),
       ]);
 
       const nextCategories = buildCategories(categoryData);
@@ -304,6 +369,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setAccounts(nextAccounts);
       setTransactions(nextTransactions);
       setBudgets(nextBudgets);
+      setGoals(buildGoals(goalData));
       setIsAuthenticated(true);
 
       await refreshInsights();
@@ -332,15 +398,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await refreshData();
       return { success: true };
     } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
-          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : 'No se pudo iniciar sesion';
-
-      return { success: false, message };
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo iniciar sesion') };
     }
   };
 
@@ -355,15 +413,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       return await login(payload.email, payload.password);
     } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
-          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : 'No se pudo registrar la cuenta';
-
-      return { success: false, message };
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo registrar la cuenta') };
     }
   };
 
@@ -443,7 +493,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       await refreshData();
     } catch {
-      // ignore and keep current UI state
+      // keep current UI state if the deletion fails
     }
   };
 
@@ -477,7 +527,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await deleteAccountRequest(account.id);
       await refreshData();
     } catch {
-      // ignore and keep current UI state
+      // keep current UI state if the deletion fails
     }
   };
 
@@ -510,13 +560,61 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateTransaction = async (transaction: TransactionUpdateInput) => {
+    const category = categories.find((item) => item.nombre === transaction.category);
+    const account = accounts.find((item) => item.name === transaction.account);
+
+    if (!category || !account) {
+      return false;
+    }
+
+    try {
+      await updateTransactionRequest(transaction.id, {
+        categoria_id: category.id,
+        cuenta_id: account.id,
+        monto: Math.abs(transaction.amount),
+        tipo: transaction.type === 'expense' ? 'gasto' : 'ingreso',
+        nota: transaction.note?.trim() ? transaction.note.trim() : transaction.name.trim(),
+        fecha: transaction.date,
+      });
+      await refreshData();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const addGoal = async (goal: Omit<Goal, 'id' | 'color'> & { color?: string }) => {
+    try {
+      await createGoalRequest({
+        nombre: goal.name.trim(),
+        monto_objetivo: goal.target,
+        monto_actual: goal.current,
+        color: goal.color ?? '#8B5CF6',
+      });
+      await refreshData();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    try {
+      await deleteGoalRequest(id);
+      await refreshData();
+    } catch {
+      // ignore and keep current UI state
+    }
+  };
+
   const updateAlertSettings = (settings: Partial<AlertSettings>) => {
     setAlertSettings((current) => ({ ...current, ...settings }));
   };
 
-  const updateUser = async (userInfo: Partial<AppUser>) => {
+  const updateUser = async (userInfo: UserUpdateInput) => {
     if (!user) {
-      return false;
+      return { success: false, message: 'No hay una sesion activa' };
     }
 
     try {
@@ -524,11 +622,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         nombre: userInfo.name ?? user.name,
         email: userInfo.email ?? user.email,
         moneda: userInfo.currency ?? user.currency,
+        contrasena_actual: userInfo.currentPassword,
+        contrasena_nueva: userInfo.newPassword,
+        confirmar_contrasena: userInfo.confirmPassword,
       });
       await refreshData();
-      return true;
-    } catch {
-      return false;
+      return { success: true };
+    } catch (error: unknown) {
+      return { success: false, message: getApiErrorMessage(error, 'No se pudo actualizar la cuenta') };
     }
   };
 
@@ -560,6 +661,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         prediction,
         advice,
         budgetAlerts,
+        goals,
         login,
         register,
         logout,
@@ -570,7 +672,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addAccount,
         deleteAccount,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
+        addGoal,
+        deleteGoal,
         updateAlertSettings,
         updateUser,
         deleteCurrentUser,

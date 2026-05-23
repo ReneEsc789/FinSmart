@@ -35,8 +35,8 @@ def gasto_semanal(transacciones: Iterable[Transaccion]):
     acumulado = defaultdict(float)
     for transaccion in transacciones:
         acumulado[_comienzo_semana(transaccion.fecha)] += float(transaccion.monto)
-    
-        semanas = sorted(acumulado.items(), key=lambda item: item[0])
+
+    semanas = sorted(acumulado.items(), key=lambda item: item[0])
     return [{"indice": index + 1, "semana_inicio": semana, "monto": monto} for index, (semana, monto) in enumerate(semanas)]
 
 

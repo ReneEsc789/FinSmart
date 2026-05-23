@@ -1,4 +1,4 @@
-import api from './api';
+import api from '../api/api';
 
 export interface LoginPayload {
   email: string;
@@ -94,6 +94,24 @@ export interface ApiBudgetAlert {
   proyeccion_total: number;
 }
 
+export interface ApiGoal {
+  id: string;
+  usuario_id: string;
+  nombre: string;
+  monto_objetivo: number;
+  monto_actual: number;
+  color: string;
+  fecha_creacion: string;
+}
+
+export interface ApiTransactionListResponse {
+  items: ApiTransaction[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 type MessageEnvelope<T> = {
   message: string;
   data: T;
@@ -114,7 +132,14 @@ export const getUser = async (userId: string) => {
   return response.data;
 };
 
-export const updateUserRequest = async (userId: string, payload: Partial<Pick<ApiUser, 'nombre' | 'email' | 'moneda'>> & { contrasena?: string }) => {
+export const updateUserRequest = async (
+  userId: string,
+  payload: Partial<Pick<ApiUser, 'nombre' | 'email' | 'moneda'>> & {
+    contrasena_actual?: string;
+    contrasena_nueva?: string;
+    confirmar_contrasena?: string;
+  },
+) => {
   const response = await api.patch<MessageEnvelope<ApiUser>>(`/usuarios/${userId}`, payload);
   return response.data;
 };
@@ -174,13 +199,18 @@ export const deleteBudgetRequest = async (budgetId: string) => {
   return response.data;
 };
 
-export const getTransactions = async () => {
-  const response = await api.get<ApiTransaction[]>('/transacciones/');
+export const getTransactions = async (params?: { limit?: number; offset?: number }) => {
+  const response = await api.get<ApiTransactionListResponse>('/transacciones/', { params });
   return response.data;
 };
 
 export const createTransactionRequest = async (payload: Pick<ApiTransaction, 'categoria_id' | 'cuenta_id' | 'monto' | 'tipo' | 'nota' | 'fecha'>) => {
   const response = await api.post<MessageEnvelope<ApiTransaction>>('/transacciones/', payload);
+  return response.data;
+};
+
+export const updateTransactionRequest = async (transactionId: string, payload: Partial<Pick<ApiTransaction, 'categoria_id' | 'cuenta_id' | 'monto' | 'tipo' | 'nota' | 'fecha'>>) => {
+  const response = await api.patch<MessageEnvelope<ApiTransaction>>(`/transacciones/${transactionId}`, payload);
   return response.data;
 };
 
@@ -201,5 +231,20 @@ export const getAdvice = async () => {
 
 export const getBudgetAlerts = async () => {
   const response = await api.get<ApiBudgetAlert[]>('/ml/alertas-presupuesto');
+  return response.data;
+};
+
+export const getGoals = async () => {
+  const response = await api.get<ApiGoal[]>('/metas-financieras/');
+  return response.data;
+};
+
+export const createGoalRequest = async (payload: Pick<ApiGoal, 'nombre' | 'monto_objetivo' | 'monto_actual' | 'color'>) => {
+  const response = await api.post<MessageEnvelope<ApiGoal>>('/metas-financieras/', payload);
+  return response.data;
+};
+
+export const deleteGoalRequest = async (goalId: string) => {
+  const response = await api.delete(`/metas-financieras/${goalId}`);
   return response.data;
 };

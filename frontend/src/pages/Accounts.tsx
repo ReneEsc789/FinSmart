@@ -61,12 +61,12 @@ export const Accounts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-white pb-32 pt-10 px-6 lg:px-12">
+    <div className="min-h-screen overflow-x-hidden bg-transparent text-white pb-32 pt-10 px-4 sm:px-6 lg:px-12">
       <div className="max-w-5xl mx-auto space-y-12">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
             <h1 className="text-4xl font-black tracking-tight font-display">Cuentas</h1>
-            <p className="text-gray-400 font-medium">Gestiona tus cuentas y limites reales del backend</p>
+            <p className="text-gray-400 font-medium break-words">Gestiona tus cuentas, categorias y limites conectados con tus datos reales.</p>
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -78,7 +78,7 @@ export const Accounts = () => {
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/20'
               }`}
             >
-              <Plus size={18} /> {customCategoriesCount >= 3 ? 'Limite alcanzado' : 'Nuevo limite'}
+              <Plus size={18} /> {customCategoriesCount >= 3 ? 'Maximo alcanzado' : 'Nuevo presupuesto'}
             </button>
           </div>
         </header>
@@ -105,7 +105,7 @@ export const Accounts = () => {
               <motion.div
                 key={account.id}
                 whileHover={{ y: -5 }}
-                className="glass p-8 rounded-[2.5rem] relative overflow-hidden group glass-hover"
+                className="glass p-8 rounded-[2.5rem] relative overflow-hidden group glass-hover min-w-0"
               >
                 <div className={`absolute top-0 right-0 w-32 h-32 ${account.color} opacity-10 blur-3xl group-hover:opacity-20 transition-opacity`} />
                 <div className="flex justify-between items-start relative z-10">
@@ -117,7 +117,7 @@ export const Accounts = () => {
                     <X size={14} />
                   </button>
                 </div>
-                <h3 className="text-xl font-black mb-6 relative z-10">{account.name}</h3>
+                <h3 className="text-xl font-black mb-6 relative z-10 break-words">{account.name}</h3>
                 <p className="text-3xl font-black relative z-10">${account.balance.toLocaleString()}</p>
               </motion.div>
             ))}
@@ -144,14 +144,14 @@ export const Accounts = () => {
               const isCritical = percent > 90;
 
               return (
-                <div key={budget.id} className="glass p-8 rounded-[2.5rem] glass-hover">
+                <div key={budget.id} className="glass p-6 sm:p-8 rounded-[2.5rem] glass-hover overflow-hidden">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg text-2xl" style={{ backgroundColor: `${budget.color}20` }}>
                         {budget.icono}
                       </div>
-                      <div>
-                        <h3 className="text-xl font-black">{budget.category}</h3>
+                      <div className="min-w-0">
+                        <h3 className="text-xl font-black break-words">{budget.category}</h3>
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
                           Limite: ${budget.limit.toLocaleString()} · {budget.periodo}
                         </p>
@@ -203,7 +203,7 @@ export const Accounts = () => {
 
       <AnimatePresence>
         {isAddingCategory && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -215,10 +215,10 @@ export const Accounts = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-10 shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black font-display tracking-tight">Nuevo Limite</h2>
+                <h2 className="text-2xl font-black font-display tracking-tight">Nuevo Presupuesto</h2>
                 <button onClick={() => setIsAddingCategory(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
                   <X size={24} />
                 </button>
@@ -297,7 +297,7 @@ export const Accounts = () => {
                   type="submit"
                   className="w-full py-5 rounded-2xl bg-purple-600 hover:bg-purple-500 font-black text-xs uppercase tracking-[0.3em] transition-all shadow-xl shadow-purple-600/20"
                 >
-                  Guardar Limite
+                  Guardar Presupuesto
                 </button>
               </form>
             </motion.div>
@@ -305,7 +305,7 @@ export const Accounts = () => {
         )}
 
         {isAddingAccount && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -317,7 +317,7 @@ export const Accounts = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+              className="relative w-full max-w-lg bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-10 shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black font-display tracking-tight">Nueva Cuenta</h2>

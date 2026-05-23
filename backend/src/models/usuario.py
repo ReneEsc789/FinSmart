@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, TIMESTAMP, ForeignKey, Integer
+from sqlalchemy import Column, String, TIMESTAMP, ForeignKey, Integer, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from sqlalchemy.sql import func
@@ -13,3 +13,9 @@ class Usuario(Base):
     moneda = Column(String(10), default="MXN")
     fecha_creacion = Column(TIMESTAMP, server_default=func.now())
     rol_id = Column(Integer, ForeignKey("roles.id"))
+    reset_code = Column(String(6), nullable=True)
+    reset_code_expires_at = Column(TIMESTAMP, nullable=True)
+    reset_code_verified = Column(Boolean, nullable=False, default=False) 
+    reset_code_attempts = Column(Integer, nullable=False, default=0)
+    reset_code_last_sent_at = Column(TIMESTAMP, nullable=True)
+    

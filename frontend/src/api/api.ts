@@ -3,6 +3,7 @@ import axios from 'axios';
 export const SESSION_TOKEN_KEY = 'finsmart_token';
 export const SESSION_USER_ID_KEY = 'finsmart_user_id';
 export const ALERT_SETTINGS_KEY = 'finsmart_alert_settings';
+export const READ_ALERTS_KEY = 'finsmart_read_alerts';
 
 export const getStoredToken = () => localStorage.getItem(SESSION_TOKEN_KEY);
 export const getStoredUserId = () => localStorage.getItem(SESSION_USER_ID_KEY);

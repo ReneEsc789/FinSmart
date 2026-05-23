@@ -51,7 +51,7 @@ const AppContent = () => {
       <AnimatedBackground />
       {showNavbar && <Navbar />}
 
-      <main className={`flex-1 transition-all duration-300 ${showNavbar ? 'pl-20 lg:pl-64' : ''}`}>
+      <main className={`flex-1 transition-all duration-300 ${showNavbar ? 'pl-24 lg:pl-80' : ''}`}>
         <AnimatePresence mode="wait">
           <Routes location={location}>
             <Route

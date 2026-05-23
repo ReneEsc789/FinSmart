@@ -1,69 +1,79 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS roles (
-    id         SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     nombre_rol VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
-    id              UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre          VARCHAR(150) NOT NULL,
-    email           VARCHAR(100) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(150) NOT NULL,
+    email VARCHAR(100) NOT NULL,
     contrasena_hash VARCHAR(250) NOT NULL,
-    moneda          VARCHAR(10)  DEFAULT 'MXN',
-    rol_id          INT          NOT NULL DEFAULT 2 REFERENCES roles(id),
-    fecha_creacion  TIMESTAMP    DEFAULT NOW()
+    moneda VARCHAR(10) DEFAULT 'MXN',
+    rol_id INT NOT NULL DEFAULT 2 REFERENCES roles(id),
+    fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS categorias (
-    id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre     VARCHAR(50)  NOT NULL,
-    icono      VARCHAR(50),
-    color      VARCHAR(30),
-    es_default BOOLEAN      DEFAULT FALSE,
-    usuario_id UUID         REFERENCES usuarios(id) ON DELETE CASCADE
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(50) NOT NULL,
+    icono VARCHAR(50),
+    color VARCHAR(30),
+    es_default BOOLEAN DEFAULT FALSE,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS cuentas (
-    id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id     UUID         NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    nombre         VARCHAR(50)  NOT NULL,
-    tipo           VARCHAR(50)  NOT NULL,
-    saldo_inicial  FLOAT        DEFAULT 0,
-    saldo_actual   FLOAT        DEFAULT 0,
-    fecha_creacion TIMESTAMP    DEFAULT NOW()
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre VARCHAR(50) NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    saldo_inicial FLOAT DEFAULT 0,
+    saldo_actual FLOAT DEFAULT 0,
+    fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS presupuestos (
-    id           UUID  PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id   UUID  NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    categoria_id UUID  NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    categoria_id UUID NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
     monto_limite FLOAT NOT NULL,
-    periodo      VARCHAR(20) NOT NULL,
-    fecha_inicio DATE        NOT NULL,
-    fecha_fin    DATE        NOT NULL
+    periodo VARCHAR(20) NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS metas_financieras (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre VARCHAR(120) NOT NULL,
+    monto_objetivo FLOAT NOT NULL,
+    monto_actual FLOAT NOT NULL DEFAULT 0,
+    color VARCHAR(30) NOT NULL DEFAULT '#8B5CF6',
+    fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS transacciones (
-    id             UUID  PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id     UUID  NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    cuenta_id      UUID  NOT NULL REFERENCES cuentas(id) ON DELETE CASCADE,
-    categoria_id   UUID  NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
-    monto          FLOAT NOT NULL,
-    tipo           VARCHAR(50) NOT NULL,
-    nota           VARCHAR(100),
-    fecha          DATE        NOT NULL,
-    fecha_creacion TIMESTAMP   DEFAULT NOW()
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    cuenta_id UUID NOT NULL REFERENCES cuentas(id) ON DELETE CASCADE,
+    categoria_id UUID NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
+    monto FLOAT NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    nota VARCHAR(100),
+    fecha DATE NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS alertas_ml (
-    id              UUID  PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id      UUID  NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    tipo_alerta     VARCHAR(50)  NOT NULL,
-    mensaje         TEXT         NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo_alerta VARCHAR(50) NOT NULL,
+    mensaje TEXT NOT NULL,
     valor_detectado FLOAT,
-    leida           BOOLEAN      DEFAULT FALSE,
-    generada_en     TIMESTAMP    DEFAULT NOW()
+    leida BOOLEAN DEFAULT FALSE,
+    generada_en TIMESTAMP DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_nombre
@@ -85,3 +95,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_cuentas_usuario_nombre
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_presupuestos_usuario_categoria_periodo
     ON presupuestos (usuario_id, categoria_id, periodo);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_metas_financieras_usuario_nombre
+    ON metas_financieras (usuario_id, LOWER(nombre));
